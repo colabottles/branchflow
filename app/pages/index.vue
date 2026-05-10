@@ -1,15 +1,18 @@
 <template>
   <main id="main-content" class="explorer">
     <header class="explorer__header">
-      <h1 class="explorer__heading">BranchFlow</h1>
-      <p class="explorer__sub">
-        Keyboard-accessible visual Git history explorer.
-      </p>
+      <div class="explorer__heading-row">
+        <h1 class="explorer__heading">BranchFlow</h1>
+        <button
+          class="explorer__theme-toggle"
+          :aria-label="`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`"
+          :aria-pressed="theme === 'dark'"
+          @click="toggleTheme">{{ theme === 'light' ? '🌙 Dark' : '☀️ Light' }}</button>
+      </div>
+      <p class="explorer__sub">Keyboard-accessible visual Git history explorer.</p>
 
       <form class="explorer__form" @submit.prevent="loadRepo">
-        <label for="repo-input" class="explorer__label">
-          GitHub repository
-        </label>
+        <label for="repo-input" class="explorer__label">GitHub repository</label>
         <div class="explorer__input-row">
           <input
             id="repo-input"
@@ -26,9 +29,7 @@
             class="explorer__btn"
             :disabled="loading">{{ loading ? 'Loading…' : 'Load' }}</button>
         </div>
-        <p id="repo-hint" class="explorer__hint">
-          e.g. <code>colabottles/branchflow</code>
-        </p>
+        <p id="repo-hint" class="explorer__hint">e.g. <code>colabottles/branchflow</code></p>
         <p
           v-if="error"
           id="repo-error"
@@ -49,6 +50,7 @@
     <div v-else-if="commits.length" class="explorer__graph">
       <GitGraph
         :commits="commits"
+        :available-branches="availableBranches"
         @select="onCommitSelect" />
     </div>
 
@@ -60,34 +62,31 @@
 
 <script setup lang="ts">
 import type { GitCommit } from '~/types/git'
+import { useTheme } from '~/composables/useTheme'
 
 useHead({
   title: 'BranchFlow — Git History Explorer',
-  meta: [
-    {
-      name: 'description',
-      content: 'Keyboard-first, screen reader–friendly visual Git history explorer. WCAG AA/AAA.',
-    },
-  ],
+  meta: [{ name: 'description', content: 'Keyboard-first, screen reader–friendly visual Git history explorer. WCAG AA/AAA.' }],
 })
 
-const DEFAULT_REPO = 'colabottles/branchflow'
+const { theme, toggle: toggleTheme } = useTheme()
 
+const DEFAULT_REPO = 'colabottles/branchflow'
 const repoInput = ref(DEFAULT_REPO)
 const commits = ref<GitCommit[]>([])
+const availableBranches = ref<string[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Load the default repo on mount
 onMounted(() => loadRepo())
 
 async function loadRepo() {
   const repo = repoInput.value.trim()
   if (!repo) return
-
   loading.value = true
   error.value = null
   commits.value = []
+  availableBranches.value = []
 
   try {
     const data = await $fetch<{ commits: GitCommit[]; branches: string[] }>(
@@ -95,6 +94,7 @@ async function loadRepo() {
       { params: { repo, limit: 30 } }
     )
     commits.value = data.commits
+    availableBranches.value = data.branches
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load repository.'
   } finally {
@@ -102,12 +102,8 @@ async function loadRepo() {
   }
 }
 
-// When a commit is selected in the graph, fetch its full detail on demand.
-// This keeps the initial load fast (list only) while still showing diffs.
 async function onCommitSelect(commit: GitCommit) {
-  // Skip if we already have diff data for this commit
   if (commit.diff.length > 0 || commit.files > 0) return
-
   try {
     const detail = await $fetch<{
       sha: string
@@ -117,8 +113,6 @@ async function onCommitSelect(commit: GitCommit) {
     }>(`/api/github/commit/${commit.id}`, {
       params: { repo: repoInput.value.trim() },
     })
-
-    // Mutate the commit in the array so GitGraph reactively updates
     const idx = commits.value.findIndex(c => c.id === commit.id)
     if (idx === -1) return
     const target = commits.value[idx]
@@ -126,7 +120,7 @@ async function onCommitSelect(commit: GitCommit) {
     target.files = detail.files
     target.diff = detail.diff
   } catch {
-    // Detail fetch failing is non-fatal — the commit row is still navigable
+    // non-fatal
   }
 }
 </script>
@@ -135,19 +129,39 @@ async function onCommitSelect(commit: GitCommit) {
 .explorer {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1rem;
   font-family: var(--font-sans, system-ui);
+}
+
+@media (min-width: 640px) {
+  .explorer {
+    padding: 2rem 1.5rem;
+  }
 }
 
 .explorer__header {
   margin-bottom: 1.5rem;
 }
 
+.explorer__heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
 .explorer__heading {
   font-size: 1.5rem;
   font-weight: 500;
   color: var(--color-text-primary);
-  margin-bottom: 0.25rem;
+  margin: 0;
+}
+
+.explorer__theme-toggle {
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.75rem;
+  white-space: nowrap;
 }
 
 .explorer__sub {
@@ -178,6 +192,7 @@ async function onCommitSelect(commit: GitCommit) {
   flex: 1;
   font-family: var(--font-mono, monospace);
   font-size: 0.8125rem;
+  min-width: 0;
 }
 
 .explorer__btn {
@@ -215,6 +230,7 @@ async function onCommitSelect(commit: GitCommit) {
   border-top-color: var(--color-text-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

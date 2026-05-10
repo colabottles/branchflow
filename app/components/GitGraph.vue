@@ -208,7 +208,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
           </template>
         </div>
 
-        <!-- Branch summary panel — rendered from structured data, no v-html -->
+        <!-- Branch summary panel — rendered from structured data -->
         <div class="git-graph__summary" aria-label="Branch summary">
           <div class="git-graph__dl">BRANCH SUMMARY</div>
           <template v-if="summary">
@@ -269,25 +269,28 @@ import { useGitSummary } from '~/composables/useGitSummary'
 
 const props = defineProps<{
   commits: GitCommit[]
+  availableBranches: string[]
 }>()
 
 const emit = defineEmits<{
   select: [commit: GitCommit]
 }>()
 
-// Constants
+// Constants for graph layout and styling
 const COMMIT_H = 56
 const NODE_R = 6
 const PAD_T = 22
 const LANE_W = 28
 const GRAPH_L = 12
 const SVG_W = 420
-const LANE_NAMES = ['main', 'feat/auth', 'fix/perf', 'hotfix'] as const
 const LANE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7']
 const LANE_COLORS_HC = ['#60b0ff', '#00e699', '#ff7040', '#cc99ff']
 const fontFamily = 'var(--font-sans, system-ui)'
 
-// Composables
+const branches = computed(() => ['all', ...props.availableBranches])
+const LANE_NAMES = computed(() => props.availableBranches)
+
+// Composables for graph state and logic
 const allCommits = computed(() => props.commits)
 const {
   visibleCommits,
@@ -347,9 +350,7 @@ const activeLanes = computed<number[]>(() =>
   [...new Set(visibleCommits.value.map(c => c.lane))].sort()
 )
 
-const branches = ['all', 'main', 'feat/auth', 'fix/perf']
-
-// Refs for imperative DOM access — used for scrollIntoView on selection change
+// Refs for imperative DOM access
 const graphScrollRef = useTemplateRef<HTMLDivElement>('graphScrollRef')
 const rowsRef = useTemplateRef<HTMLDivElement>('rowsRef')
 const svgRef = useTemplateRef<SVGSVGElement>('svgRef')
@@ -446,6 +447,8 @@ watch(selectedIndex, async idx => {
   border-bottom: 0.5px solid var(--brd);
   background: var(--surf);
   flex-shrink: 0;
+  flex-wrap: wrap;
+  min-height: 40px;
   overflow-x: auto;
 }
 
@@ -490,9 +493,15 @@ watch(selectedIndex, async idx => {
 /* Body */
 .git-graph__body {
   display: grid;
-  grid-template-columns: 1fr 272px;
+  grid-template-columns: 1fr;
   overflow: hidden;
   min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .git-graph__body {
+    grid-template-columns: 1fr 272px;
+  }
 }
 
 /* Graph panel */
@@ -554,11 +563,10 @@ watch(selectedIndex, async idx => {
 .git-graph__row-msg {
   font-size: 12px;
   color: var(--txt);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 240px;
   font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+  padding-right: 8px;
 }
 
 .git-graph__row-meta {
@@ -725,7 +733,7 @@ watch(selectedIndex, async idx => {
   margin: 0 2px;
 }
 
-/* Status bar */
+/* ── Status bar ── */
 .git-graph__statusbar {
   display: flex;
   align-items: center;
