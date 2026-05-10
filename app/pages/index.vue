@@ -66,7 +66,7 @@ import { useTheme } from '../composables/useTheme'
 
 useHead({
   title: 'BranchFlow — Git History Explorer',
-  meta: [{ name: 'description', content: 'Keyboard-first, screen reader–friendly visual Git history explorer. WCAG AA/AAA.' }],
+  meta: [{ name: 'description', content: 'Keyboard-first, screen reader–friendly visual Git history explorer.' }],
 })
 
 const { theme, toggle: toggleTheme } = useTheme()
