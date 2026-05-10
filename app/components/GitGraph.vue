@@ -64,7 +64,7 @@
             :viewBox="`0 0 ${SVG_W} ${graphHeight}`"
             :height="graphHeight"
             :width="SVG_W"
-            style="display:block;width:100%;overflow:visible">
+            style="display:block;position:absolute;top:0;left:0">
             <!-- Lane spine guides -->
             <line
               v-for="lane in activeLanes"
@@ -102,12 +102,12 @@ v-for="(c, i) in visibleCommits" :key="`node-${c.id}`" :cx="laneX(c.lane)"
               :delay="reduceMotion ? 0 : i * 0.04 + 0.1" :node-r="NODE_R"
               :high-contrast="highContrast" />
 
-            <!-- Lane labels at top -->
+            <!-- Lane labels at top — one per active lane, name derived from commits -->
             <text
-v-for="lane in activeLanes" :key="`label-${lane}`" :x="laneX(lane)" :y="PAD_T - 4"
-              text-anchor="middle" font-size="9" font-weight="600" :fill="laneColor(lane)"
+v-for="lane in activeLanes" :key="`label-${lane}`" :x="laneX(lane)" :y="PAD_T - 8"
+              text-anchor="middle" font-size="8" font-weight="600" :fill="laneColor(lane)"
               opacity="0.85"
-              letter-spacing="0.04em" :font-family="fontFamily">{{ LANE_NAMES[lane] }}</text>
+              :font-family="fontFamily">{{ laneNameMap.get(lane) ?? '' }}</text>
           </svg>
 
           <!-- Commit rows — keyboard-navigable listbox overlaid on SVG -->
@@ -277,31 +277,39 @@ const emit = defineEmits<{
   select: [commit: GitCommit]
 }>()
 
-// Constants for graph layout and styling
+// Constants for layout and styling
 const COMMIT_H = 56
 const NODE_R = 6
 const PAD_T = 28
-const LANE_W = 36
-const GRAPH_L = 16
+const LANE_W = 24
+const GRAPH_L = 12
 const LANE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7']
 const LANE_COLORS_HC = ['#60b0ff', '#00e699', '#ff7040', '#cc99ff']
 const fontFamily = 'var(--font-sans, system-ui)'
 
 const branches = computed(() => ['all', ...props.availableBranches])
-const LANE_NAMES = computed(() => props.availableBranches)
 
-// SVG width and row indent grow with the number of active lanes
+// Maps lane number → branch name, derived from the commit data
+const laneNameMap = computed<Map<number, string>>(() => {
+  const m = new Map<number, string>()
+  for (const c of allCommits.value) {
+    if (!m.has(c.lane)) m.set(c.lane, c.branch)
+  }
+  return m
+})
+
+// SVG is only as wide as the lane area — text rows sit beside it via paddingLeft
 const maxLane = computed(() =>
   Math.max(0, ...allCommits.value.map(c => c.lane))
 )
 const SVG_W = computed(() =>
-  GRAPH_L + (maxLane.value + 1) * LANE_W + NODE_R + 32
+  GRAPH_L + (maxLane.value + 1) * LANE_W + NODE_R + 8
 )
 const rowPaddingLeft = computed(() =>
-  `${GRAPH_L + (maxLane.value + 1) * LANE_W + NODE_R + 16}px`
+  `${SVG_W.value + 8}px`
 )
 
-// Composables for graph state and logic
+// Composables for graph state and branch summary logic
 const allCommits = computed(() => props.commits)
 const {
   visibleCommits,
