@@ -7,7 +7,7 @@
 </template>
 
 <style>
-/* Tokens */
+/* Light theme tokens */
 :root {
   --color-background-primary: #ffffff;
   --color-background-secondary: #f7f7f8;
@@ -22,7 +22,32 @@
   --border-radius-lg: 12px;
 }
 
-/* Global reset */
+/* Dark theme tokens */
+[data-theme="dark"] {
+  --color-background-primary: #0f0f0f;
+  --color-background-secondary: #1a1a1a;
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #9ca3af;
+  --color-text-danger: #f87171;
+  --color-border-primary: #374151;
+  --color-border-secondary: #2d2d2d;
+  --color-border-tertiary: #222222;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-background-primary: #0f0f0f;
+    --color-background-secondary: #1a1a1a;
+    --color-text-primary: #f0f0f0;
+    --color-text-secondary: #9ca3af;
+    --color-text-danger: #f87171;
+    --color-border-primary: #374151;
+    --color-border-secondary: #2d2d2d;
+    --color-border-tertiary: #222222;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -40,9 +65,9 @@ body {
   margin: 0;
   background: var(--color-background-primary);
   color: var(--color-text-primary);
+  transition: background 0.15s, color 0.15s;
 }
 
-/* Form element resets */
 input,
 button {
   font-family: inherit;
@@ -75,6 +100,7 @@ button {
   background: var(--color-background-primary);
   color: var(--color-text-primary);
   cursor: pointer;
+  transition: background 0.12s;
 }
 
 button:hover:not(:disabled) {
@@ -91,7 +117,6 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Skip link */
 .app__skip-link {
   position: absolute;
   top: -100%;
