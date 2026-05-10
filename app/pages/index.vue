@@ -1,5 +1,5 @@
 <template>
-  <main class="explorer">
+  <main id="main-content" class="explorer">
     <header class="explorer__header">
       <h1 class="explorer__heading">BranchFlow</h1>
       <p class="explorer__sub">

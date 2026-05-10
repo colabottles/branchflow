@@ -1,11 +1,9 @@
 [build]
   command = "npm run build"
-  publish = ".output/public"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/server"
-  status = 200
+# GITHUB_TOKEN is set in the Netlify dashboard under
+# Site configuration → Environment variables — never committed to the repo.
