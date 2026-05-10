@@ -1,7 +1,5 @@
 import type { GitCommit } from '~/types/git'
 
-const BRANCH_CYCLE = ['all', 'main', 'feat/auth', 'fix/perf'] as const
-
 export function useGitGraph(allCommits: Ref<GitCommit[]>) {
   const selectedIndex = ref(0)
   const filter = ref('all')
@@ -95,15 +93,10 @@ export function useGitGraph(allCommits: Ref<GitCommit[]>) {
       handler()
       return
     }
-    // B cycles branch filter
     if (e.key === 'b' || e.key === 'B') {
-      const idx = BRANCH_CYCLE.indexOf(
-        filter.value as typeof BRANCH_CYCLE[number]
-      )
-
-      const next =
-        BRANCH_CYCLE[(idx + 1) % BRANCH_CYCLE.length]!
-
+      const branches = ['all', ...new Set(allCommits.value.map(c => c.branch))]
+      const idx = branches.indexOf(filter.value)
+      const next = branches[(idx + 1) % branches.length]!
       setFilter(next)
     }
   }
