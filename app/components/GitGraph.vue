@@ -14,7 +14,7 @@
       'git-graph--reduced': reduceMotion,
     }"
     aria-label="Git history explorer">
-    <!-- Toolbar -->
+    <!-- Toolbar  -->
     <div
       class="git-graph__toolbar"
       role="toolbar"
@@ -42,6 +42,21 @@
         :class="{ 'git-graph__chip--on': reduceMotion }"
         :aria-pressed="reduceMotion"
         @click="toggleReduceMotion">Reduce motion</button>
+    </div>
+
+    <!-- Color key -->
+    <div class="git-graph__key" role="list" aria-label="Branch color key">
+      <div
+        v-for="lane in activeLanes"
+        :key="lane"
+        class="git-graph__key-item"
+        role="listitem">
+        <span
+          class="git-graph__key-swatch"
+          :style="{ background: laneColor(lane) }"
+          aria-hidden="true" />
+        <span class="git-graph__key-name">{{ laneNameMap.get(lane) ?? '' }}</span>
+      </div>
     </div>
 
     <!-- Body -->
@@ -102,12 +117,6 @@ v-for="(c, i) in visibleCommits" :key="`node-${c.id}`" :cx="laneX(c.lane)"
               :delay="reduceMotion ? 0 : i * 0.04 + 0.1" :node-r="NODE_R"
               :high-contrast="highContrast" />
 
-            <!-- Lane labels at top — one per active lane, name derived from commits -->
-            <text
-v-for="lane in activeLanes" :key="`label-${lane}`" :x="laneX(lane)" :y="PAD_T - 8"
-              text-anchor="middle" font-size="8" font-weight="600" :fill="laneColor(lane)"
-              opacity="0.85"
-              :font-family="fontFamily">{{ laneNameMap.get(lane) ?? '' }}</text>
           </svg>
 
           <!-- Commit rows — keyboard-navigable listbox overlaid on SVG -->
@@ -209,7 +218,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
           </template>
         </div>
 
-        <!-- Branch summary panel — rendered from structured data -->
+        <!-- Branch summary panel — rendered from structured data, no v-html -->
         <div class="git-graph__summary" aria-label="Branch summary">
           <div class="git-graph__dl">BRANCH SUMMARY</div>
           <template v-if="summary">
@@ -251,7 +260,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
       </aside>
     </div>
 
-    <!-- Status bar -->
+    <!-- Status bar  -->
     <div class="git-graph__statusbar" aria-hidden="true">
       <span><kbd>↑↓</kbd> navigate</span>
       <span><kbd>←→</kbd> switch branch</span>
@@ -285,7 +294,6 @@ const LANE_W = 24
 const GRAPH_L = 12
 const LANE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7']
 const LANE_COLORS_HC = ['#60b0ff', '#00e699', '#ff7040', '#cc99ff']
-const fontFamily = 'var(--font-sans, system-ui)'
 
 const branches = computed(() => ['all', ...props.availableBranches])
 
@@ -331,7 +339,7 @@ const summary = computed(() =>
   selectedCommit.value ? computeSummary(selectedCommit.value) : null
 )
 
-// Layout helpers
+// Layout helpers const graphHeight = computed(() =>
 const graphHeight = computed(() =>
   PAD_T + visibleCommits.value.length * COMMIT_H + PAD_T
 )
@@ -423,7 +431,7 @@ watch(selectedIndex, async idx => {
   --diff-del-txt: #A32D2D;
 
   display: grid;
-  grid-template-rows: 40px 1fr 32px;
+  grid-template-rows: 40px auto 1fr 32px;
   height: 560px;
   border: 0.5px solid var(--brd);
   border-radius: 12px;
@@ -749,6 +757,36 @@ watch(selectedIndex, async idx => {
   padding: 1px 4px;
   border-radius: 3px;
   margin: 0 2px;
+}
+
+/* Color key */
+.git-graph__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 6px 12px;
+  border-bottom: 0.5px solid var(--brd);
+  background: var(--surf);
+}
+
+.git-graph__key-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.git-graph__key-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.git-graph__key-name {
+  font-size: 11px;
+  color: var(--txt);
+  font-family: var(--font-mono, monospace);
 }
 
 /* Status bar */
