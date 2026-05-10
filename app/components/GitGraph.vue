@@ -122,6 +122,7 @@ v-for="(c, i) in visibleCommits" :key="`row-${c.id}`" class="git-graph__row"
               :style="{
                 top: (PAD_T + i * COMMIT_H) + 'px',
                 height: COMMIT_H + 'px',
+                paddingLeft: rowPaddingLeft,
               }" @click="select(i)" @keydown="onKeydown">
               <div class="git-graph__row-info">
                 <div class="git-graph__row-hash">{{ c.short }}</div>
@@ -279,16 +280,26 @@ const emit = defineEmits<{
 // Constants for graph layout and styling
 const COMMIT_H = 56
 const NODE_R = 6
-const PAD_T = 22
-const LANE_W = 28
-const GRAPH_L = 12
-const SVG_W = 420
+const PAD_T = 28
+const LANE_W = 36
+const GRAPH_L = 16
 const LANE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7']
 const LANE_COLORS_HC = ['#60b0ff', '#00e699', '#ff7040', '#cc99ff']
 const fontFamily = 'var(--font-sans, system-ui)'
 
 const branches = computed(() => ['all', ...props.availableBranches])
 const LANE_NAMES = computed(() => props.availableBranches)
+
+// SVG width and row indent grow with the number of active lanes
+const maxLane = computed(() =>
+  Math.max(0, ...allCommits.value.map(c => c.lane))
+)
+const SVG_W = computed(() =>
+  GRAPH_L + (maxLane.value + 1) * LANE_W + NODE_R + 32
+)
+const rowPaddingLeft = computed(() =>
+  `${GRAPH_L + (maxLane.value + 1) * LANE_W + NODE_R + 16}px`
+)
 
 // Composables for graph state and logic
 const allCommits = computed(() => props.commits)
@@ -531,7 +542,6 @@ watch(selectedIndex, async idx => {
   right: 0;
   display: flex;
   align-items: center;
-  padding-left: 148px;
   border-radius: 4px;
   cursor: pointer;
   pointer-events: all;
@@ -733,7 +743,7 @@ watch(selectedIndex, async idx => {
   margin: 0 2px;
 }
 
-/* ── Status bar ── */
+/* Status bar */
 .git-graph__statusbar {
   display: flex;
   align-items: center;
