@@ -52,7 +52,8 @@
         :commits="commits"
         :available-branches="availableBranches"
         :detail-loading="detailLoading"
-        @select="onCommitSelect" />
+        @select="onCommitSelect"
+        @filter-change="onFilterChange" />
     </div>
 
     <div v-else-if="!loading && !error" class="explorer__empty">
@@ -126,6 +127,24 @@ async function onCommitSelect(commit: GitCommit) {
     // non-fatal
   } finally {
     detailLoading.value = false
+  }
+}
+
+async function onFilterChange(branch: string) {
+  loading.value = true
+  error.value = null
+  commits.value = []
+  try {
+    const data = await $fetch<{ commits: GitCommit[]; branches: string[] }>(
+      '/api/github/repo',
+      { params: { repo: repoInput.value.trim(), limit: 30, branch: branch === 'all' ? '' : branch } }
+    )
+    commits.value = data.commits
+    if (data.commits[0]) onCommitSelect(data.commits[0])
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to load repository.'
+  } finally {
+    loading.value = false
   }
 }
 </script>

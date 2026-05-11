@@ -125,8 +125,10 @@ export default defineEventHandler(async event => {
   const branchTips = new Map<string, string>(branches.map(b => [b.commit.sha, b.name]))
 
   const commits: GitCommit[] = rawCommits.map((c, i) => {
-    const branch = shaBranchMap.get(c.sha) ?? defaultBranch
-    const lane = laneMap.get(branch) ?? 0
+    const assignedBranch = branch
+      ? branch
+      : shaBranchMap.get(c.sha) ?? defaultBranch
+    const lane = laneMap.get(assignedBranch) ?? 0
     const refs: string[] = []
     if (i === 0) refs.push('HEAD')
     const tip = branchTips.get(c.sha)
@@ -140,7 +142,7 @@ export default defineEventHandler(async event => {
       email: c.commit.author.email,
       date: relativeDate(c.commit.author.date),
       dateIso: c.commit.author.date,
-      branch,
+      branch: assignedBranch,
       lane,
       refs,
       parents: c.parents.map(p => p.sha),

@@ -28,7 +28,7 @@
           class="git-graph__chip"
           :class="{ 'git-graph__chip--on': filter === b }"
           :aria-pressed="filter === b"
-          @click="setFilter(b)">{{ b === 'all' ? 'All branches' : b }}</button>
+          @click="onSetFilter(b)">{{ b === 'all' ? 'All branches' : b }}</button>
       </div>
 
       <button
@@ -300,6 +300,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [commit: GitCommit]
+  filterChange: [branch: string]
 }>()
 
 // Constants for layout and styling
@@ -349,6 +350,11 @@ const {
   toggleHighContrast,
   toggleReduceMotion,
 } = useGitGraph(allCommits)
+
+function onSetFilter(b: string) {
+  setFilter(b)
+  emit('filterChange', b)
+}
 
 const { computeSummary } = useGitSummary(allCommits)
 const summary = computed(() =>
