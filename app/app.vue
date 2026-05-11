@@ -6,22 +6,13 @@
   </div>
 </template>
 
-<script setup lang="ts">
-useHead({
-  link: [
-    // { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-    { rel: 'alternate icon', href: '/favicon.ico' },
-  ],
-})
-</script>
-
 <style>
 /* Light theme tokens */
 :root {
   --color-background-primary: #ffffff;
   --color-background-secondary: #f7f7f8;
   --color-text-primary: #111111;
-  --color-text-secondary: #6b7280;
+  --color-text-secondary: #5a6270;
   --color-text-danger: #c0392b;
   --color-border-primary: #d1d5db;
   --color-border-secondary: #e5e7eb;
@@ -41,6 +32,20 @@ useHead({
   --color-border-primary: #374151;
   --color-border-secondary: #2d2d2d;
   --color-border-tertiary: #222222;
+}
+
+[data-theme="dark"] .git-graph,
+:root:not([data-theme="light"]) .git-graph {
+  --c0: #a8d4ff;
+  --c1: #6ee8be;
+  --c2: #ffaa80;
+  --c3: #ccbbff;
+  --c0l: #0a1f33;
+  --c1l: #082018;
+  --c2l: #2a0f00;
+  --c3l: #150f30;
+  --diff-add-txt: #7ec87e;
+  --diff-del-txt: #e08080;
 }
 
 /* System preference fallback */
@@ -143,5 +148,28 @@ button:focus-visible {
 
 .app__skip-link:focus {
   top: 0;
+}
+
+.explorer__footer {
+  margin-top: 2em;
+  font-size: 0.675rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.explorer__footer p a {
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+}
+
+.explorer__footer p a:hover {
+  color: var(--color-text-primary);
+  text-decoration-thickness: 2px;
+}
+
+.explorer__footer p a:focus,
+.explorer__footer p a:focus-visible {
+  outline: 2px solid #378ADD;
+  outline-offset: 2px;
 }
 </style>
