@@ -767,7 +767,8 @@ watch(selectedIndex, async idx => {
 .git-graph__diff {
   border: 0.5px solid var(--brd);
   border-radius: 4px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-top: 4px;
 }
 
@@ -777,6 +778,7 @@ watch(selectedIndex, async idx => {
   font-size: 10px;
   line-height: 1.6;
   white-space: pre;
+  min-width: max-content;
 }
 
 .git-graph__diff-line--add {
