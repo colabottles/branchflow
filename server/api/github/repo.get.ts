@@ -125,10 +125,8 @@ export default defineEventHandler(async event => {
   const branchTips = new Map<string, string>(branches.map(b => [b.commit.sha, b.name]))
 
   const commits: GitCommit[] = rawCommits.map((c, i) => {
-    const assignedBranch = branch
-      ? branch
-      : shaBranchMap.get(c.sha) ?? defaultBranch
-    const lane = laneMap.get(assignedBranch) ?? 0
+    const assignedBranch = branch ? branch : shaBranchMap.get(c.sha) ?? defaultBranch
+    const lane = branch ? 0 : (laneMap.get(assignedBranch) ?? 0)
     const refs: string[] = []
     if (i === 0) refs.push('HEAD')
     const tip = branchTips.get(c.sha)
