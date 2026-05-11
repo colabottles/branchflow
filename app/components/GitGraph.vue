@@ -53,7 +53,7 @@
         role="listitem">
         <span
           class="git-graph__key-swatch"
-          :style="{ background: laneColor(lane) }"
+          :class="`git-graph__lane-bg-${lane}`"
           aria-hidden="true" />
         <span class="git-graph__key-name">{{ laneNameMap.get(lane) ?? '' }}</span>
       </div>
@@ -140,9 +140,10 @@ v-for="(c, i) in visibleCommits" :key="`row-${c.id}`" class="git-graph__row"
 v-for="ref in c.refs" :key="ref" class="git-graph__tag"
                     :class="ref === 'HEAD' ? 'git-graph__tag--head' : 'git-graph__tag--ref'">{{ ref
                     }}</span>
-                  <span
-v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
-                    aria-label="merge conflict">⚠ conflict</span>
+                  <span v-if="c.conflict" class="git-graph__tag git-graph__tag--warn">
+                    <span class="git-graph__sr-only">merge conflict</span>
+                    <span aria-hidden="true">⚠ conflict</span>
+                  </span>
                   {{ c.message }}
                 </div>
                 <div class="git-graph__row-meta">{{ c.author }} · {{ c.date }}</div>
@@ -154,7 +155,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
 
       <!-- Detail panel -->
       <aside class="git-graph__detail" aria-label="Commit details">
-        <div class="git-graph__detail-inner">
+        <div class="git-graph__detail-inner" tabindex="0">
           <template v-if="selectedCommit">
             <div class="git-graph__dl">DETAILS</div>
             <div class="git-graph__hash">{{ selectedCommit.id }}</div>
@@ -183,8 +184,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
               <span class="git-graph__dk">Branch</span>
               <span
                 class="git-graph__dv"
-                :style="{ color: laneColor(selectedCommit.lane) }">{{ selectedCommit.branch
-                }}</span>
+                :class="`git-graph__lane-${selectedCommit.lane}`">{{ selectedCommit.branch }}</span>
             </div>
             <div class="git-graph__dr">
               <span class="git-graph__dk">Files</span>
@@ -202,6 +202,12 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
             <div class="git-graph__divider" />
             <div class="git-graph__dl">DIFF PREVIEW</div>
             <div
+              v-if="detailLoading"
+              class="git-graph__diff-loading"
+              aria-live="polite"
+              aria-busy="true">Loading diff…</div>
+            <div
+              v-else
               class="git-graph__diff"
               role="region"
               :aria-label="`Diff preview for commit ${selectedCommit.short}`">
@@ -219,7 +225,7 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
         </div>
 
         <!-- Branch summary panel — rendered from structured data, no v-html -->
-        <div class="git-graph__summary" aria-label="Branch summary">
+        <div class="git-graph__summary">
           <div class="git-graph__dl">BRANCH SUMMARY</div>
           <template v-if="summary">
             <!-- main branch -->
@@ -231,10 +237,15 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
             </p>
             <!-- feature / fix branch -->
             <p v-else class="git-graph__summary-text">
-              Branch <strong>{{ summary.branch }}</strong> diverged
-              <strong>{{ summary.divergedAt }}</strong>
-              commit{{ summary.divergedAt !== 1 ? 's' : '' }} ago from
-              <strong>main</strong>.
+              <span v-if="summary.divergedAt === 0">
+                Branch <strong>{{ summary.branch }}</strong> is the current branch.
+              </span>
+              <span v-else>
+                Branch <strong>{{ summary.branch }}</strong> diverged
+                <strong>{{ summary.divergedAt }}</strong>
+                commit{{ summary.divergedAt !== 1 ? 's' : '' }} ago from
+                <strong>main</strong>.
+              </span>
               <strong>{{ summary.commitsAhead }}</strong>
               commit{{ summary.commitsAhead !== 1 ? 's' : '' }} ahead.
               <span
@@ -270,6 +281,10 @@ v-if="c.conflict" class="git-graph__tag git-graph__tag--warn"
       <span>{{ visibleCommits.length }} commits</span>
     </div>
   </section>
+
+  <footer class="explorer__footer">
+    <p>Made by <a href="https://toddl.dev" target="_blank" rel="noopener">Todd Libby</a>. View on <a href="https://github.com/colabottles/branchflow" target="_blank" rel="noopener">GitHub</a>.</p>
+  </footer>
 </template>
 
 <script setup lang="ts">
@@ -280,6 +295,7 @@ import { useGitSummary } from '~/composables/useGitSummary'
 const props = defineProps<{
   commits: GitCommit[]
   availableBranches: string[]
+  detailLoading: boolean
 }>()
 
 const emit = defineEmits<{
@@ -407,6 +423,14 @@ watch(selectedIndex, async idx => {
   overflow: hidden;
 }
 
+.git-graph__sr-only {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 /* Root */
 .git-graph {
   --c0: #185FA5;
@@ -431,8 +455,8 @@ watch(selectedIndex, async idx => {
   --diff-del-txt: #A32D2D;
 
   display: grid;
-  grid-template-rows: 40px auto 1fr 32px;
-  height: 560px;
+  grid-template-rows: auto auto 1fr 32px;
+  height: clamp(400px, 80vh, 800px);
   border: 0.5px solid var(--brd);
   border-radius: 12px;
   overflow: hidden;
@@ -470,13 +494,13 @@ watch(selectedIndex, async idx => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 6px 12px;
   border-bottom: 0.5px solid var(--brd);
   background: var(--surf);
   flex-shrink: 0;
   flex-wrap: wrap;
-  min-height: 40px;
-  overflow-x: auto;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .git-graph__title {
@@ -490,6 +514,7 @@ watch(selectedIndex, async idx => {
 
 .git-graph__filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -529,6 +554,38 @@ watch(selectedIndex, async idx => {
   .git-graph__body {
     grid-template-columns: 1fr 272px;
   }
+}
+
+.git-graph__dv.git-graph__lane-0 {
+  color: var(--c0);
+}
+
+.git-graph__dv.git-graph__lane-1 {
+  color: var(--c1);
+}
+
+.git-graph__dv.git-graph__lane-2 {
+  color: var(--c2);
+}
+
+.git-graph__dv.git-graph__lane-3 {
+  color: var(--c3);
+}
+
+.git-graph__lane-bg-0 {
+  background: var(--c0);
+}
+
+.git-graph__lane-bg-1 {
+  background: var(--c1);
+}
+
+.git-graph__lane-bg-2 {
+  background: var(--c2);
+}
+
+.git-graph__lane-bg-3 {
+  background: var(--c3);
 }
 
 /* Graph panel */
@@ -644,6 +701,12 @@ watch(selectedIndex, async idx => {
   padding: 12px;
 }
 
+.git-graph__diff-loading {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px;
+}
+
 .git-graph__dl {
   font-size: 10px;
   font-weight: 600;
@@ -685,7 +748,7 @@ watch(selectedIndex, async idx => {
 .git-graph__dv {
   color: var(--txt);
   font-family: var(--font-mono, monospace);
-  word-break: break-all;
+  overflow-wrap: break-word;
   font-size: 11px;
 }
 
@@ -816,6 +879,7 @@ kbd {
   border-radius: 3px;
   padding: 1px 4px;
 }
+
 
 /* Graph animations (gated on prefers-reduced-motion system pref) */
 @media (prefers-reduced-motion: no-preference) {

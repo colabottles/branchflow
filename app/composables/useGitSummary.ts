@@ -35,8 +35,9 @@ export function useGitSummary(commits: Ref<GitCommit[]>) {
 
     const commitsAhead = branchCommits.length
     const terse = [
-      `Branch ${commit.branch}.`,
-      `Diverged ${divergedAt} commit${divergedAt !== 1 ? 's' : ''} ago from main.`,
+      divergedAt === 0
+        ? `Branch ${commit.branch} is the current branch.`
+        : `Branch ${commit.branch}. Diverged ${divergedAt} commit${divergedAt !== 1 ? 's' : ''} ago from main.`,
       `${commitsAhead} commit${commitsAhead !== 1 ? 's' : ''} ahead.`,
       conflictFiles.length
         ? `Warning: merge conflict likely in ${conflictFiles.join(', ')}.`

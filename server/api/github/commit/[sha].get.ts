@@ -38,7 +38,7 @@ function parsePatch(patch: string): GitDiffLine[] {
     .split('\n')
     .filter(l => l.startsWith('+') || l.startsWith('-') || l.startsWith(' '))
     .filter(l => !l.startsWith('+++') && !l.startsWith('---'))
-    .slice(0, 8)
+    .slice(0, 16)
     .map(l => ({
       type: (l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : 'ctx') as GitDiffLine['type'],
       content: l,
@@ -61,7 +61,7 @@ export default defineEventHandler(async event => {
   const previewFile = detail.files.find(f => f.patch) ?? detail.files[0]
   const diff: GitDiffLine[] = previewFile?.patch
     ? parsePatch(previewFile.patch)
-    : []
+    : [{ type: 'ctx', content: previewFile ? '(diff too large to preview)' : '(no diff available)' }]
 
   return {
     sha: detail.sha,

@@ -29,7 +29,7 @@
             class="explorer__btn"
             :disabled="loading">{{ loading ? 'Loading…' : 'Load' }}</button>
         </div>
-        <p id="repo-hint" class="explorer__hint">e.g. <code>colabottles/branchflow</code></p>
+        <p id="repo-hint" class="explorer__hint">e.g. <code>gitkraken/vscode-gitlens</code></p>
         <p
           v-if="error"
           id="repo-error"
@@ -51,6 +51,7 @@
       <GitGraph
         :commits="commits"
         :available-branches="availableBranches"
+        :detail-loading="detailLoading"
         @select="onCommitSelect" />
     </div>
 
@@ -66,16 +67,17 @@ import { useTheme } from '../composables/useTheme'
 
 useHead({
   title: 'BranchFlow — Git History Explorer',
-  meta: [{ name: 'description', content: 'Keyboard-first, screen reader–friendly visual Git history explorer.' }],
+  meta: [{ name: 'description', content: 'Keyboard-first, screen reader-friendly visual Git history explorer.' }],
 })
 
 const { theme, toggle: toggleTheme } = useTheme()
 
-const DEFAULT_REPO = 'colabottles/branchflow'
+const DEFAULT_REPO = 'gitkraken/vscode-gitlens'
 const repoInput = ref(DEFAULT_REPO)
 const commits = ref<GitCommit[]>([])
 const availableBranches = ref<string[]>([])
 const loading = ref(false)
+const detailLoading = ref(false)
 const error = ref<string | null>(null)
 
 onMounted(() => loadRepo())
@@ -87,7 +89,6 @@ async function loadRepo() {
   error.value = null
   commits.value = []
   availableBranches.value = []
-
   try {
     const data = await $fetch<{ commits: GitCommit[]; branches: string[] }>(
       '/api/github/repo',
@@ -95,6 +96,8 @@ async function loadRepo() {
     )
     commits.value = data.commits
     availableBranches.value = data.branches
+    useHead({ title: `${repo} — BranchFlow` })
+    if (data.commits[0]) onCommitSelect(data.commits[0])
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load repository.'
   } finally {
@@ -104,6 +107,7 @@ async function loadRepo() {
 
 async function onCommitSelect(commit: GitCommit) {
   if (commit.diff.length > 0 || commit.files > 0) return
+  detailLoading.value = true
   try {
     const detail = await $fetch<{
       sha: string
@@ -117,10 +121,11 @@ async function onCommitSelect(commit: GitCommit) {
     if (idx === -1) return
     const target = commits.value[idx]
     if (!target) return
-    target.files = detail.files
-    target.diff = detail.diff
+    commits.value[idx] = { ...target, files: detail.files, diff: detail.diff }
   } catch {
     // non-fatal
+  } finally {
+    detailLoading.value = false
   }
 }
 </script>
@@ -131,6 +136,8 @@ async function onCommitSelect(commit: GitCommit) {
   margin: 0 auto;
   padding: 1.5rem 1rem;
   font-family: var(--font-sans, system-ui);
+  display: flex;
+  flex-direction: column;
 }
 
 @media (min-width: 640px) {
@@ -206,6 +213,7 @@ async function onCommitSelect(commit: GitCommit) {
 
 .explorer__hint code {
   font-family: var(--font-mono, monospace);
+  color: #179287;
 }
 
 .explorer__error {
@@ -213,13 +221,14 @@ async function onCommitSelect(commit: GitCommit) {
   color: var(--color-text-danger, #c0392b);
 }
 
-.explorer__loading {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
+.explorer__error {
+  font-size: 0.8125rem;
+  color: var(--color-text-danger, #c0392b);
+  background: rgba(192, 57, 43, 0.08);
+  border: 0.5px solid var(--color-text-danger, #c0392b);
+  border-radius: 6px;
+  padding: 8px 12px;
+  max-width: 480px;
 }
 
 .explorer__spinner {
@@ -247,7 +256,9 @@ async function onCommitSelect(commit: GitCommit) {
 }
 
 .explorer__graph {
-  margin-top: 1rem;
+  margin-top: 0;
+  min-height: 0;
+  flex: 1;
 }
 
 .explorer__empty {

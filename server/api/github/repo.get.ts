@@ -1,7 +1,5 @@
 import type { GitCommit } from '~/types/git'
 
-// GitHub API response shapes (minimal — only fields we use)
-
 interface GHBranch {
   name: string
   commit: { sha: string }
@@ -16,24 +14,16 @@ interface GHCommitSummary {
   parents: { sha: string }[]
 }
 
-// Lane assignment
-
-// main is always lane 0. Other branches get assigned in first-seen order.
 function buildLaneMap(branches: GHBranch[]): Map<string, number> {
   const map = new Map<string, number>()
   map.set('main', 0)
-  // Also accept 'master' as lane 0 for repos that haven't renamed
   map.set('master', 0)
   let next = 1
   for (const b of branches) {
-    if (!map.has(b.name)) {
-      map.set(b.name, next++)
-    }
+    if (!map.has(b.name)) map.set(b.name, next++)
   }
   return map
 }
-
-// Relative date formatting
 
 function relativeDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -46,8 +36,6 @@ function relativeDate(iso: string): string {
   const months = Math.floor(days / 30)
   return `${months}mo ago`
 }
-
-// GitHub fetch helper
 
 async function ghFetch<T>(
   path: string,
@@ -74,22 +62,18 @@ async function ghFetch<T>(
   return res.json() as Promise<T>
 }
 
-// Route handler
-
 export default defineEventHandler(async event => {
   const query = getQuery(event)
   const repo = String(query.repo ?? 'colabottles/branchflow')
   const perPage = Math.min(Number(query.limit ?? 30), 100)
   const branch = String(query.branch ?? '')
 
-  // Validate owner/repo format
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
     throw createError({ statusCode: 400, message: `Invalid repo format: "${repo}". Expected owner/repo.` })
   }
 
   const token = useRuntimeConfig().githubToken as string | undefined
 
-  // Fetch branches and commits in parallel
   const [branches, rawCommits] = await Promise.all([
     ghFetch<GHBranch[]>(`/repos/${repo}/branches`, token, { per_page: '30' }),
     ghFetch<GHCommitSummary[]>(`/repos/${repo}/commits`, token, {
@@ -102,39 +86,51 @@ export default defineEventHandler(async event => {
     return { commits: [], repo, branches: branches.map(b => b.name) }
   }
 
-  // Build a sha→branch map: walk each branch tip and mark commits
-  // GitHub doesn't tell us which branch a commit belongs to in /commits,
-  // so we assign each commit to the first branch whose tip it matches or
-  // falls in the parent chain of — approximated here via the branch list.
   const laneMap = buildLaneMap(branches)
+  const commitShaSet = new Set(rawCommits.map(c => c.sha))
 
-  // Build sha→index for parent edge resolution
-  const shaIndex = new Map<string, number>()
-  rawCommits.forEach((c, i) => shaIndex.set(c.sha, i))
+  // Build a definitive sha→branch map by fetching commits for each
+  // non-default branch tip. Limit to 5 branches to stay within rate limits.
+  const defaultBranch = branches[0]?.name ?? 'main'
+  const featureBranches = branches
+    .filter(b => b.name !== defaultBranch && b.name !== 'main' && b.name !== 'master')
+    .slice(0, 5)
 
-  // Assign branch: check if any branch tip sha matches; otherwise infer from
-  // commit position relative to branch tips.
-  const branchTips = new Map<string, string>(branches.map(b => [b.commit.sha, b.name]))
+  const shaBranchMap = new Map<string, string>()
 
-  function inferBranch(sha: string, idx: number): string {
-    // Direct tip match
-    if (branchTips.has(sha)) return branchTips.get(sha)!
-    // Walk forward from this commit — if a tip is the first commit above it
-    // on the same chain, attribute to that branch
-    for (const [tipSha, name] of branchTips) {
-      const tipIdx = shaIndex.get(tipSha)
-      if (tipIdx !== undefined && tipIdx <= idx) return name
-    }
-    return branches[0]?.name ?? 'main'
+  // Seed with branch tip SHAs first — these are definitive
+  for (const b of branches) {
+    shaBranchMap.set(b.commit.sha, b.name)
   }
 
+  // For each feature branch, fetch its recent commits and map them
+  await Promise.all(
+    featureBranches.map(async b => {
+      const branchCommits = await ghFetch<GHCommitSummary[]>(
+        `/repos/${repo}/commits`,
+        token,
+        { sha: b.name, per_page: String(perPage) }
+      ).catch(() => [] as GHCommitSummary[])
+
+      for (const c of branchCommits) {
+        // Only map commits that appear in our visible window
+        // and haven't already been claimed by another branch
+        if (commitShaSet.has(c.sha) && !shaBranchMap.has(c.sha)) {
+          shaBranchMap.set(c.sha, b.name)
+        }
+      }
+    })
+  )
+
+  const branchTips = new Map<string, string>(branches.map(b => [b.commit.sha, b.name]))
+
   const commits: GitCommit[] = rawCommits.map((c, i) => {
-    const branch = inferBranch(c.sha, i)
+    const branch = shaBranchMap.get(c.sha) ?? defaultBranch
     const lane = laneMap.get(branch) ?? 0
     const refs: string[] = []
     if (i === 0) refs.push('HEAD')
-    const tip = branches.find(b => b.commit.sha === c.sha)
-    if (tip) refs.push(tip.name)
+    const tip = branchTips.get(c.sha)
+    if (tip) refs.push(tip)
 
     return {
       id: c.sha,
@@ -148,7 +144,6 @@ export default defineEventHandler(async event => {
       lane,
       refs,
       parents: c.parents.map(p => p.sha),
-      // files and diff are loaded on demand via /api/github/commit/[sha]
       files: 0,
       conflict: c.parents.length > 1,
       diff: [],
