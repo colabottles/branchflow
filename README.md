@@ -2,7 +2,7 @@
 
 **A keyboard-accessible, WCAG AA/AAA visual Git history explorer built with Nuxt 4, TypeScript, and the GitHub API.**
 
-🔗 **[Live demo](https://branchflow.netlify.app)** — loads the GitKraken vscode-gitlens repository by default.
+🔗 **[Live demo](https://branchflowapp.netlify.app)** — loads the GitKraken vscode-gitlens repository by default.
 
 ---
 
