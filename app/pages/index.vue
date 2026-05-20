@@ -52,6 +52,7 @@
         :commits="commits"
         :available-branches="availableBranches"
         :detail-loading="detailLoading"
+        :repo-name="repoInput"
         @select="onCommitSelect"
         @filter-change="onFilterChange" />
     </div>

@@ -21,7 +21,11 @@
       aria-label="Graph controls">
       <span class="git-graph__title" aria-hidden="true">Git History Explorer</span>
 
-      <div role="group" aria-label="Filter by branch" class="git-graph__filters">
+      <div
+        role="group"
+        aria-label="Filter by branch"
+        class="git-graph__filters"
+        @keydown="onChipKeydown">
         <button
           v-for="b in branches"
           :key="b"
@@ -144,7 +148,7 @@ v-for="ref in c.refs" :key="ref" class="git-graph__tag"
                     <span class="git-graph__sr-only">merge conflict</span>
                     <span aria-hidden="true">⚠ conflict</span>
                   </span>
-                  {{ c.message }}
+                  {{ c.message.length > 72 ? c.message.slice(0, 72) + '…' : c.message }}
                 </div>
                 <div class="git-graph__row-meta">{{ c.author }} · {{ c.date }}</div>
               </div>
@@ -169,7 +173,15 @@ v-for="ref in c.refs" :key="ref" class="git-graph__tag"
               <span
                 v-if="selectedCommit.conflict"
                 class="git-graph__tag git-graph__tag--warn">⚠ conflict</span>
-              {{ selectedCommit.message }}
+              {{ selectedCommit.message.length > 120
+                ? selectedCommit.message.slice(0, 120) + '…'
+                : selectedCommit.message }}
+              <a
+              v-if="selectedCommit.message.length > 120"
+              :href="`https://github.com/${repoName}/commit/${selectedCommit.id}`"
+              target="_blank"
+              rel="noopener"
+              class="git-graph__read-more">read more</a>
             </div>
 
             <div class="git-graph__dr">
@@ -296,6 +308,7 @@ const props = defineProps<{
   commits: GitCommit[]
   availableBranches: string[]
   detailLoading: boolean
+  repoName: string
 }>()
 
 const emit = defineEmits<{
@@ -377,6 +390,24 @@ function commitY(index: number): number {
 function laneColor(lane: number): string {
   const colors = highContrast.value ? LANE_COLORS_HC : LANE_COLORS
   return colors[lane] ?? colors[0]!
+}
+
+function onChipKeydown(e: KeyboardEvent) {
+  const chips = Array.from(
+    (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button')
+  )
+  const idx = chips.indexOf(document.activeElement as HTMLElement)
+  if (idx === -1) return
+
+  if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    e.stopPropagation()
+    chips[(idx + 1) % chips.length]?.focus()
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    e.stopPropagation()
+    chips[(idx - 1 + chips.length) % chips.length]?.focus()
+  }
 }
 
 // Build id→index map for parent lookups — O(1)
@@ -556,9 +587,16 @@ watch(selectedIndex, async idx => {
   min-height: 0;
 }
 
+.git-graph__read-more {
+  color: var(--focus);
+  text-decoration: underline;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 @media (min-width: 768px) {
   .git-graph__body {
-    grid-template-columns: 1fr 272px;
+    grid-template-columns: 1fr 340px;
   }
 }
 
