@@ -54,12 +54,13 @@ export function useGitGraph(allCommits: Ref<GitCommit[]>) {
     for (let i = selectedIndex.value + 1; i < visibleCommits.value.length; i++) {
       const commit = visibleCommits.value[i]
       if (!commit) continue
-
       if (commit.lane !== cur.lane) {
         select(i)
         return
       }
     }
+    // No different lane found — move to next commit
+    select(selectedIndex.value + 1)
   }
 
   function selectPrevBranch() {
@@ -69,12 +70,13 @@ export function useGitGraph(allCommits: Ref<GitCommit[]>) {
     for (let i = selectedIndex.value - 1; i >= 0; i--) {
       const commit = visibleCommits.value[i]
       if (!commit) continue
-
       if (commit.lane !== cur.lane) {
         select(i)
         return
       }
     }
+    // No different lane found — move to previous commit
+    select(selectedIndex.value - 1)
   }
 
   function onKeydown(e: KeyboardEvent) {
