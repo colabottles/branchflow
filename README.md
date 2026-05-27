@@ -2,7 +2,7 @@
 
 **A keyboard-accessible, WCAG AA/AAA visual Git history explorer built with Nuxt 4, TypeScript, and the GitHub API.**
 
-🔗 **[Live demo](https://branchflowapp.netlify.app)** — loads the GitKraken vscode-gitlens repository by default.
+🔗 **[Live demo](https://branchflowapp.netlify.app)** — loads the BranchFlow repository by default.
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:3000`. It loads `gitkraken/vscode-gitlens` by default.
+The app runs at `http://localhost:3000`. It loads `colabottles/branchflow` by default.
 
 ### GitHub token (optional but recommended)
 
