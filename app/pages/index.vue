@@ -29,7 +29,7 @@
             class="explorer__btn"
             :disabled="loading">{{ loading ? 'Loading…' : 'Load' }}</button>
         </div>
-        <p id="repo-hint" class="explorer__hint">e.g. <code>gitkraken/vscode-gitlens</code></p>
+        <p id="repo-hint" class="explorer__hint">e.g. <code>colabottles/branchflow</code></p>
         <p
           v-if="error"
           id="repo-error"
@@ -74,7 +74,7 @@ useHead({
 
 const { theme, toggle: toggleTheme } = useTheme()
 
-const DEFAULT_REPO = 'gitkraken/vscode-gitlens'
+const DEFAULT_REPO = 'colabottles/branchflow'
 const repoInput = ref(DEFAULT_REPO)
 const commits = ref<GitCommit[]>([])
 const availableBranches = ref<string[]>([])
